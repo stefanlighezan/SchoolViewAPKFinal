@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "74687319461",
+    "project_id": "schoolviewapp-197d2",
+    "storage_bucket": "schoolviewapp-197d2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:74687319461:android:53a69b7357168b6d896c4c",
+        "android_client_info": {
+          "package_name": "com.sdlig.schoolview"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrwt74puPA1eots-gfNoEjYHXbjnPYiSs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

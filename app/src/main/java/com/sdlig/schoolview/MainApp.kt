@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.ImageView
+import android.widget.Toast
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -42,11 +43,6 @@ class MainApp : AppCompatActivity() {
         auth = Firebase.auth
         db = Firebase.firestore
         val user: FirebaseUser? = auth.currentUser
-
-        if(user == null) {
-            val intent = Intent(this, Auth::class.java)
-            startActivity(intent)
-        }
         // end
 
         takePhotoBtn.setOnClickListener {
@@ -89,12 +85,15 @@ class MainApp : AppCompatActivity() {
                                 }
                         }.addOnFailureListener { e ->
                             Log.e("MainApp", "Error fetching user document", e)
+                            Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show()
                         }
                     }.addOnFailureListener { e ->
                         Log.e("MainApp", "Error getting download URL", e)
+                        Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show()
                     }
                 }.addOnFailureListener { e ->
                     Log.e("MainApp", "Error uploading image", e)
+                    Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show()
                 }
             }
         }

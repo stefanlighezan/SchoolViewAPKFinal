@@ -7,10 +7,13 @@ import android.util.Log
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.widget.AppCompatEditText
+import com.google.firebase.appcheck.ktx.appCheck
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.ktx.initialize
 
 class Auth : AppCompatActivity() {
     private lateinit var etEmail: AppCompatEditText
@@ -26,6 +29,11 @@ class Auth : AppCompatActivity() {
         etEmail = findViewById(R.id.etEmail)
         etPassword = findViewById(R.id.etPassword)
         loginBtn = findViewById(R.id.loginBtn)
+
+        Firebase.initialize(context = this)
+        Firebase.appCheck.installAppCheckProviderFactory(
+            PlayIntegrityAppCheckProviderFactory.getInstance(),
+        )
         //
 
         auth = Firebase.auth

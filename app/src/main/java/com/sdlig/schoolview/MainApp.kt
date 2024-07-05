@@ -13,7 +13,9 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
@@ -46,57 +48,72 @@ class MainApp : AppCompatActivity() {
         // end
 
         takePhotoBtn.setOnClickListener {
-            if(bitmap == null) {
+            if (bitmap == null) {
                 val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
                 startActivityForResult(takePictureIntent, 1)
             } else {
-                //send to cloud storage and firestore
+                // Send to cloud storage and firestore
                 val storageRef = Firebase.storage.reference
                 val imagesRef = storageRef.child("images/${user?.uid}/${System.currentTimeMillis()}.jpg")
 
                 val baos = ByteArrayOutputStream()
                 bitmap?.compress(Bitmap.CompressFormat.JPEG, 100, baos)
+
                 val data = baos.toByteArray()
 
                 val uploadTask = imagesRef.putBytes(data)
                 uploadTask.addOnSuccessListener { taskSnapshot ->
-                    Log.d("MainApp", "Image uploaded successfully: ${taskSnapshot.metadata?.path}")
-
-                    // Get download URL
+                    // Successfully uploaded image, get download URL
                     imagesRef.downloadUrl.addOnSuccessListener { uri ->
-                        val imageUrl = uri.toString()
+                        val downloadUrl = uri.toString()
 
-                        // Update Firestore
-                        val userDocRef = db.collection("users").document(user?.uid ?: "")
-                        userDocRef.get().addOnSuccessListener { documentSnapshot ->
-                            val draftsList = documentSnapshot.get("drafts") as? MutableList<String> ?: mutableListOf()
-                            draftsList.add(imageUrl)
+                        // Query Firestore to find document with matching UID
+                        db.collection("users")
+                            .whereEqualTo("uid", user!!.uid)
+                            .get()
+                            .addOnSuccessListener { querySnapshot ->
+                                if (!querySnapshot.isEmpty) {
+                                    val document = querySnapshot.documents[0]
+                                    val drafts = document.get("drafts") as? ArrayList<String> ?: ArrayList()
 
-                            // Update 'drafts' field in Firestore
-                            userDocRef.update("drafts", draftsList)
-                                .addOnSuccessListener {
-                                    Log.d("MainApp", "Drafts list updated successfully")
-                                    // Clear bitmap and ImageView after update
-                                    bitmap = null
-                                    ivDisplayImage.setImageBitmap(null)
+                                    // Add download URL to "drafts" array
+                                    drafts.add(downloadUrl)
+
+                                    // Update "drafts" array in Firestore using merge operation
+                                    val updates = hashMapOf<String, Any>(
+                                        "drafts" to drafts
+                                    )
+                                    document.reference.set(updates, SetOptions.merge())
+                                        .addOnSuccessListener {
+                                            Log.d("MainApp", "Drafts updated successfully")
+                                            Toast.makeText(this, "Drafts updated successfully", Toast.LENGTH_SHORT).show()
+                                        }
+                                        .addOnFailureListener { e ->
+                                            Log.e("MainApp", "Error updating drafts", e)
+                                            Toast.makeText(this, "Error updating drafts: ${e.message}", Toast.LENGTH_LONG).show()
+                                        }
+                                } else {
+                                    Log.e("MainApp", "Document not found")
+                                    Toast.makeText(this, "Document not found", Toast.LENGTH_SHORT).show()
                                 }
-                                .addOnFailureListener { e ->
-                                    Log.e("MainApp", "Error updating drafts list", e)
-                                }
-                        }.addOnFailureListener { e ->
-                            Log.e("MainApp", "Error fetching user document", e)
-                            Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show()
-                        }
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("MainApp", "Error querying document", e)
+                                Toast.makeText(this, "Error querying document: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
                     }.addOnFailureListener { e ->
                         Log.e("MainApp", "Error getting download URL", e)
-                        Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Error getting download URL: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 }.addOnFailureListener { e ->
                     Log.e("MainApp", "Error uploading image", e)
-                    Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Error uploading image: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
+
+
+
 
         redoPhotoBtn.setOnClickListener {
             bitmap = null

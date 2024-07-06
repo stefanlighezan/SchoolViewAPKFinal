@@ -9,9 +9,11 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatEditText
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -26,6 +28,7 @@ import com.google.firebase.storage.ktx.storage
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.Calendar
 
 class MainApp : AppCompatActivity() {
 
@@ -35,6 +38,7 @@ class MainApp : AppCompatActivity() {
     private lateinit var redoPhotoBtn: FloatingActionButton
     private lateinit var logOutBtn: FloatingActionButton
     private lateinit var ivDisplayImage: ImageView
+    private lateinit var etNotesTitle: AppCompatEditText
 
     private var currentPhotoPath: String? = null
 
@@ -52,6 +56,7 @@ class MainApp : AppCompatActivity() {
         redoPhotoBtn = findViewById(R.id.redoPhotoBtn)
         logOutBtn = findViewById(R.id.logOut)
         ivDisplayImage = findViewById(R.id.ivDisplayImage)
+        etNotesTitle = findViewById(R.id.etNotesTitle)
 
         // Initialize Firebase components
         auth = FirebaseAuth.getInstance()
@@ -178,10 +183,21 @@ class MainApp : AppCompatActivity() {
                     .addOnSuccessListener { querySnapshot ->
                         if (!querySnapshot.isEmpty) {
                             val document = querySnapshot.documents[0]
-                            val drafts = document.get("drafts") as? ArrayList<String> ?: ArrayList()
+                            val drafts = document.get("drafts") as? ArrayList<Any> ?: ArrayList()
+
+                            var text = etNotesTitle.text.toString()
+
+                            val today = Calendar.getInstance()
+                            val sendDateUAT = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(today.time)
+
+                            etNotesTitle.setText(sendDateUAT.toString())
 
                             // Add download URL to "drafts" array
-                            drafts.add(downloadUrl)
+                            val hashMap = hashMapOf<String, Any>(
+                                "url" to downloadUrl,
+                                "title" to text
+                            )
+                            drafts.add(hashMap)
 
                             // Update "drafts" array in Firestore using merge operation
                             val updates = hashMapOf<String, Any>(

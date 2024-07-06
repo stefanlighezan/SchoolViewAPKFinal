@@ -26,9 +26,14 @@ class Auth : AppCompatActivity() {
         setContentView(R.layout.activity_auth)
 
         //setup views
-        etEmail = findViewById(R.id.etEmail)
-        etPassword = findViewById(R.id.etPassword)
-        loginBtn = findViewById(R.id.loginBtn)
+        etEmail = findViewById(R.id.etEmailSignUp)
+        etPassword = findViewById(R.id.etPasswordSignup)
+        loginBtn = findViewById(R.id.signupBtn)
+
+        findViewById<Button>(R.id.btnGoToSignUp).setOnClickListener {
+            val intent = Intent(this, SignUp::class.java)
+            startActivity(intent)
+        }
 
         Firebase.initialize(context = this)
         Firebase.appCheck.installAppCheckProviderFactory(

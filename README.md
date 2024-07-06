@@ -4,8 +4,10 @@ To do this, first press Account, then Settings, scroll to New Access Token, set 
 Copy the base name of the website, for example, https://ucscout.instructure.com, without anything else. Then, using the following example (https://{district name}.instructure.com/api/v1/courses?access_token={access_token}&enrollment_type=student), paste the district or Canvas owner name into {district name}, if I were at UC Scout, then it would look like this: 
 https://ucscout.instructure.com/api/v1/courses?access_token={access_token}&enrollment_type=student. Now, paste your access token into {access token}. If your code was 123 (which it is NOT), our constructed code would be https://ucscout.instructure.com/api/v1/courses?access_token=123&enrollment_type=student
 
-Below are some non-working examples:
+Below are some NON-WORKING examples:
 
 https://ucscout.instructure.com/api/v1/courses?access_token=Mu4WCA6MHGu4XZQ9MkRV27DDeKGDmwUUMh9hHfkeWUvHBf2Z7rfJt2ykvKktyXWc&enrollment_type=student
+
 https://fusd.instructure.com/api/v1/courses?access_token=Mu4adkmadGu4XZQ9MDDeKGDmwUUM99ad9h9hHfkeWUvHBf2Z7rfJt2ykvKktyXWc&enrollment_type=student
+
 https://sjusd.instructure.com/api/v1/courses?access_token=Mu4WCA6Gu4XZQ9MkRV27DDeK000GDmwUUMh9hHfkeWUvHBf2Z7rfJt2ykvKktyXWc&enrollment_type=student

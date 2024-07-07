@@ -7,6 +7,7 @@ interface ApiService {
     @GET("api/v1/courses")
     fun fetchDataFromUrl(
         @Query("access_token") accessToken: String,
-        @Query("enrollment_type") enrollmentType: String
+        @Query("enrollment_type") enrollmentType: String,
+        @Query("page") page: Int
     ): Call<List<Course>>
 }

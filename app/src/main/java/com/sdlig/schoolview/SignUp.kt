@@ -32,10 +32,10 @@ class SignUp : AppCompatActivity() {
         auth = Firebase.auth
 
         // Initialize Views
-        etEmailSignUp = findViewById(R.id.etEmailSignUp)
-        etPasswordSignup = findViewById(R.id.etPasswordSignup)
-        signupBtn = findViewById(R.id.signupBtn)
-        etAccessToken = findViewById(R.id.etAccessToken)
+        etEmailSignUp = findViewById(R.id.etEmailSignupForApp)
+        etPasswordSignup = findViewById(R.id.etPasswordSignUpForAccount)
+        signupBtn = findViewById(R.id.btnSignUpApp)
+        etAccessToken = findViewById(R.id.etAccessTokenText)
 
         // Set click listener for sign up button
         signupBtn.setOnClickListener {
@@ -46,56 +46,64 @@ class SignUp : AppCompatActivity() {
                 Toast.makeText(this, "Please fill out all fields", Toast.LENGTH_SHORT).show()
             } else {
                 // Call Firebase to create user with email and password
-                auth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this) { task ->
-                        if (task.isSuccessful) {
-                            // Sign up success, update UI accordingly
-                            val user = auth.currentUser
-                            Toast.makeText(this, "Sign up successful", Toast.LENGTH_SHORT).show()
+                    // Sign up success, update UI accordingly
+                    val user = auth.currentUser
+                    Toast.makeText(this, "Sign up successful", Toast.LENGTH_SHORT).show()
 
-                            // Example access token URL
-                            val accessTokenUrl = etAccessToken.text.toString().trim()
+                    // Example access token URL
+                    val accessTokenUrl = etAccessToken.text.toString().trim()
 
-                            // Extract base URL
-                            val baseUrl = extractBaseUrl(accessTokenUrl)
+                    // Extract base URL
+                    val baseUrl = extractBaseUrl(accessTokenUrl)
 
-                            // Initialize Retrofit with dynamic base URL
-                            val retrofit = Retrofit.Builder()
-                                .baseUrl(baseUrl)
-                                .addConverterFactory(GsonConverterFactory.create())
-                                .build()
+                    // Initialize Retrofit with dynamic base URL
+                    val retrofit = Retrofit.Builder()
+                        .baseUrl(baseUrl)
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .build()
 
-                            apiService = retrofit.create(ApiService::class.java)
+                    apiService = retrofit.create(ApiService::class.java)
 
-                            val accessToken = extractAccessToken(accessTokenUrl).toString()
+                    val accessToken = extractAccessToken(accessTokenUrl).toString()
 
-                            // Fetch data using Retrofit
+                    // Fetch data using Retrofit
+                    var page = 1
+                    var hasMorePages = true
+                    val allData = arrayListOf<Course>() // Initialize list to hold all data
 
-                            apiService.fetchDataFromUrl(accessToken, "student").enqueue(object :
-                                Callback<List<Course>> {
-                                override fun onResponse(call: Call<List<Course>>, response: Response<List<Course>>) {
+                    do {
+                        apiService.fetchDataFromUrl(accessToken, "student", page)
+                            .enqueue(object : Callback<List<Course>> {
+                                override fun onResponse(
+                                    call: Call<List<Course>>,
+                                    response: Response<List<Course>>
+                                ) {
                                     if (response.isSuccessful) {
                                         val data = response.body()
                                         data?.let {
-                                            // Log data to console
-                                            println("Data fetched successfully: $data")
+                                            if (it.isNotEmpty()) {
+                                                // Add fetched data to allData list
+                                                allData.addAll(it)
+                                                page++
+                                            } else {
+                                                // No more data available on current page
+                                                hasMorePages = false
+                                            }
                                         }
                                     } else {
                                         println("Failed to fetch data: ${response.code()}")
+                                        hasMorePages = false // Set false on failure
                                     }
                                 }
 
                                 override fun onFailure(call: Call<List<Course>>, t: Throwable) {
                                     println("Network error: ${t.message}")
+                                    hasMorePages = false // Set false on failure
                                 }
                             })
+                    } while (hasMorePages)
 
-                            // Optionally, you can navigate to another activity or do other tasks
-                        } else {
-                            // If sign up fails, display a message to the user.
-                            Toast.makeText(baseContext, "Authentication failed.", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                    // Optionally, you can navigate to another activity or do other tasks
             }
         }
     }
@@ -110,7 +118,8 @@ class SignUp : AppCompatActivity() {
         }
     }
 
-    private fun extractAccessToken(url: String): String? {
+    // Function to extract access token from URL
+    private fun extractAccessToken(url: String): String {
         val accessTokenKey = "access_token="
         val startIndex = url.indexOf(accessTokenKey)
 
@@ -128,6 +137,6 @@ class SignUp : AppCompatActivity() {
             return url.substring(tokenStartIndex, endIndex)
         }
 
-        return " "
+        return ""
     }
 }

@@ -98,7 +98,7 @@ class SignUp : AppCompatActivity() {
         var hashmapList: ArrayList<HashMap<String, Any>> = arrayListOf()
 
         for(course in allCourses) {
-            if(!course.isNull() && !course.isOutdated()) {
+            if(!course.isNull()) {
                 hashmapList.add(hashMapOf<String, Any>(
                     "name" to course.name,
                     "id" to course.id,

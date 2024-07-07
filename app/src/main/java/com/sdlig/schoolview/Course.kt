@@ -1,6 +1,9 @@
 package com.sdlig.schoolview
 
+import android.icu.text.SimpleDateFormat
 import com.google.gson.annotations.SerializedName
+import java.util.Calendar
+import java.util.Locale
 
 data class Course(
     @SerializedName("id") val id: Int,
@@ -30,23 +33,26 @@ data class Course(
     @SerializedName("time_zone") val timeZone: String,
     @SerializedName("blueprint") val blueprint: Boolean,
     @SerializedName("template") val template: Boolean,
-    @SerializedName("enrollments") val enrollments: List<Enrollment>,
     @SerializedName("hide_final_grades") val hideFinalGrades: Boolean,
     @SerializedName("workflow_state") val workflowState: String,
     @SerializedName("restrict_enrollments_to_course_dates") val restrictEnrollmentsToCourseDates: Boolean,
     @SerializedName("overridden_course_visibility") val overriddenCourseVisibility: String // Assuming overridden_course_visibility is always present
-)
+) {
+    fun isOutdated(): Boolean {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+        val currentDate = Calendar.getInstance().time// Current date
 
-data class Calendar(
-    @SerializedName("ics") val icsUrl: String
-)
+        // Parse createdAt string to Date object
+        val createdDate =
+            dateFormat.parse(createdAt) ?: return false // Return false if parsing fails
 
-data class Enrollment(
-    @SerializedName("type") val type: String,
-    @SerializedName("role") val role: String,
-    @SerializedName("role_id") val roleId: Int,
-    @SerializedName("user_id") val userId: Int,
-    @SerializedName("enrollment_state") val enrollmentState: String,
-    @SerializedName("limit_privileges_to_course_section") val limitPrivilegesToCourseSection: Boolean
-)
+        // Calculate one year from createdAt
+        val calendar = Calendar.getInstance()
+        calendar.time = createdDate
+        calendar.add(Calendar.YEAR, 1) // Adding one year to the createdAt date
+
+        // Check if currentDate is after the calculated date
+        return currentDate.after(calendar.time)
+    }
+}
 

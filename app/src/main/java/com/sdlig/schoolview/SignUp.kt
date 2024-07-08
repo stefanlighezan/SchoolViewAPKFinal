@@ -125,7 +125,7 @@ class SignUp : AppCompatActivity() {
     private fun firestoreUpdate(allCourses: ArrayList<Course>) {
         val listOfHashmaps = arrayListOf<HashMap<String,Any>>()
         for(course in allCourses) {
-            if(!course.isNull() && !course.isOutdated()) {
+            if(!course.isNull()) {
                 listOfHashmaps.add(
                     hashMapOf(
                         "name" to course.name!!,
@@ -137,13 +137,19 @@ class SignUp : AppCompatActivity() {
             }
         }
 
+        val settings = hashMapOf<String, Any>(
+            "viewOutdatedCourses" to false,
+            "deleteCourses" to false,
+        )
+
         try {
             Firebase.firestore.collection("users")
                 .add(hashMapOf<String, Any>(
                     "uid" to auth.currentUser!!.uid,
                     "courses" to listOfHashmaps,
                     "drafts" to listOf<Any>(),
-                    "accessToken" to privateAccessToken
+                    "accessToken" to privateAccessToken,
+                    "settings" to settings
                 )).addOnSuccessListener {
                     Toast.makeText(this@SignUp, "Successfully Created Account. Sign In Again!", Toast.LENGTH_SHORT).show()
                     val intent = Intent(this@SignUp, Auth::class.java)

@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#161b22"
     tools:context=".SignUp">
 
     <TextView
@@ -15,7 +16,8 @@
         android:textSize="48sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:textColor="#fff"/>
 
     <EditText
         android:id="@+id/etEmailSignupForApp"
@@ -26,6 +28,9 @@
         android:layout_marginEnd="32dp"
         android:ems="10"
         android:hint="Email Address"
+        android:textColor="#fff"
+        android:textColorHint="#fff"
+        android:backgroundTint="#fff"
         android:inputType="textEmailAddress"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -39,7 +44,10 @@
         android:layout_marginTop="32dp"
         android:layout_marginEnd="32dp"
         android:ems="10"
+        android:textColorHint="#fff"
         android:hint="Password"
+        android:textColor="#fff"
+        android:backgroundTint="#fff"
         android:inputType="textPassword"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -53,6 +61,9 @@
         android:layout_marginTop="32dp"
         android:layout_marginEnd="32dp"
         android:ems="10"
+        android:textColor="#fff"
+        android:textColorHint="#fff"
+        android:backgroundTint="#fff"
         android:hint="Access Token"
         android:inputType="text"
         app:layout_constraintEnd_toEndOf="parent"
@@ -65,9 +76,17 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginEnd="32dp"
+        android:background="@drawable/button_background"
+        android:backgroundTint="#FFFFFF"
+        android:elevation="0dp"
         android:text="Create Account"
+        style="SignUpButton"
+        android:textAllCaps="false"
+        android:textColor="#fff"
+        app:iconTint="#FFFFFF"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/etAccessTokenText" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -65,6 +65,11 @@ class MainApp : AppCompatActivity() {
         // Check if user is authenticated
         val user: FirebaseUser? = auth.currentUser
 
+        val today = Calendar.getInstance()
+        val sendDateUAT = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(today.time)
+
+        etNotesTitle.setText(sendDateUAT.toString())
+
         // Set click listeners
         takePhotoBtn.setOnClickListener {
             if(currentPhotoPath == null) {
@@ -171,11 +176,6 @@ class MainApp : AppCompatActivity() {
         val imagesRef = storageRef.child("images/${auth.currentUser?.uid}/${file.lastPathSegment}")
 
         val uploadTask = imagesRef.putFile(file)
-
-        val today = Calendar.getInstance()
-        val sendDateUAT = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(today.time)
-
-        etNotesTitle.setText(sendDateUAT.toString())
 
         uploadTask.addOnSuccessListener { taskSnapshot ->
             // Image uploaded successfully, get download URL

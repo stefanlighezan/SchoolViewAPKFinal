@@ -10,7 +10,6 @@ import android.widget.EditText
 import android.widget.Toast
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.firestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import retrofit2.Call
@@ -61,69 +60,22 @@ class SignUp : AppCompatActivity() {
                                 .baseUrl(getBaseUrl(accessToken))
                                 .addConverterFactory(GsonConverterFactory.create())
                                 .build()
-
-                            // Create ApiService instance
+                            privateAccessToken = accessToken.toString()
                             val apiService: ApiService = retrofit.create(ApiService::class.java)
 
-                            // Variable to hold all courses
-                            var allCourses: MutableList<Course> = ArrayList()
+                            // Fetch courses and handle them
+                            var _pageNumber = 1
+                            var allCourses: ArrayList<Course> = arrayListOf()
 
-                            // Fetch courses recursively to handle pagination
                             fetchCourses(apiService, 1, getAccessToken(accessToken), allCourses)
 
-                            privateAccessToken = accessToken
-                            firestoreUpdate(allCourses)
 
-
-
-
-                        } else {
-                            // Firebase authentication failed
-                            Toast.makeText(baseContext, "Authentication failed.", Toast.LENGTH_SHORT).show()
                         }
                     }
             }
         }
     }
 
-    private fun getAccessToken(str: String): String{
-        val start = str.indexOf("access_token=")
-        if(start != -1) {
-            return str.substring(start + "access_token=".length)
-        }
-        else return " "
-    }
-
-    private fun firestoreUpdate(allCourses: MutableList<Course>) {
-        var hashmapList: ArrayList<HashMap<String, Any>> = arrayListOf()
-
-        for(course in allCourses) {
-            if(!course.isNull() && !course.isOutdated()) {
-                hashmapList.add(hashMapOf<String, Any>(
-                    "name" to course.name!!,
-                    "id" to course.id!!,
-                    "created_at" to course.created_at!!,
-                    "notes" to arrayListOf<Any>()
-                ))
-            }
-        }
-
-        Firebase.firestore
-            .collection("users")
-            .add(hashMapOf<String, Any>(
-                "uid" to auth.currentUser!!.uid,
-                "accessToken" to privateAccessToken,
-                "drafts" to arrayListOf<Any>(),
-                "courses" to hashmapList
-            ))
-            .addOnSuccessListener {
-                Toast.makeText(this, "Account Successfully Created", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, Auth::class.java)
-                startActivity(intent)
-            }
-    }
-
-    // Function to fetch courses recursively until all pages are retrieved
     private fun fetchCourses(apiService: ApiService, page: Int, accessToken: String, allCourses: MutableList<Course>) {
         apiService.getCourses(accessToken, "student", page).enqueue(object : Callback<List<Course>> {
             override fun onResponse(call: Call<List<Course>>, response: Response<List<Course>>) {
@@ -145,7 +97,10 @@ class SignUp : AppCompatActivity() {
                         // For example, save to Firestore or display in UI
                         // Note: Ensure you handle this according to your app's logic
                         // For now, just print the number of courses fetched
+
                         Toast.makeText(baseContext, "Fetched ${allCourses.size} courses", Toast.LENGTH_SHORT).show()
+
+                        firestoreUpdate(allCourses as ArrayList<Course>)
                     }
                 } else {
                     // Handle API error
@@ -159,6 +114,49 @@ class SignUp : AppCompatActivity() {
             }
         })
     }
+
+    private fun getAccessToken(str: String): String {
+        val start = str.indexOf("access_token=")
+        if (start != -1) {
+            return str.substring(start + "access_token=".length)
+        } else return " "
+    }
+
+    private fun firestoreUpdate(allCourses: ArrayList<Course>) {
+        val listOfHashmaps = arrayListOf<HashMap<String,Any>>()
+        for(course in allCourses) {
+            if(!course.isNull() && !course.isOutdated()) {
+                listOfHashmaps.add(
+                    hashMapOf(
+                        "name" to course.name!!,
+                        "notes" to arrayListOf<Any>(),
+                        "created_at" to course.created_at!!,
+                        "id" to course.id!!
+                    )
+                )
+            }
+        }
+
+        try {
+            Firebase.firestore.collection("users")
+                .add(hashMapOf<String, Any>(
+                    "uid" to auth.currentUser!!.uid,
+                    "courses" to listOfHashmaps,
+                    "drafts" to listOf<Any>(),
+                    "accessToken" to privateAccessToken
+                )).addOnSuccessListener {
+                    Toast.makeText(this@SignUp, "Successfully Created Account. Sign In Again!", Toast.LENGTH_SHORT).show()
+                    val intent = Intent(this@SignUp, Auth::class.java)
+                    startActivity(intent)
+                }
+        } catch (e: Exception) {
+            Toast.makeText(this@SignUp, "${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+
+    // Function to fetch courses recursively until all pages are retrieved
+
 
     fun getBaseUrl(url: String): String {
         val startIndex = url.indexOf("https://")

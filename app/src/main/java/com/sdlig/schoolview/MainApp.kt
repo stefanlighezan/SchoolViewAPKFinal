@@ -172,6 +172,11 @@ class MainApp : AppCompatActivity() {
 
         val uploadTask = imagesRef.putFile(file)
 
+        val today = Calendar.getInstance()
+        val sendDateUAT = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(today.time)
+
+        etNotesTitle.setText(sendDateUAT.toString())
+
         uploadTask.addOnSuccessListener { taskSnapshot ->
             // Image uploaded successfully, get download URL
             imagesRef.downloadUrl.addOnSuccessListener { uri ->
@@ -187,10 +192,6 @@ class MainApp : AppCompatActivity() {
 
                             var text = etNotesTitle.text.toString()
 
-                            val today = Calendar.getInstance()
-                            val sendDateUAT = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(today.time)
-
-                            etNotesTitle.setText(sendDateUAT.toString())
 
                             // Add download URL to "drafts" array
                             val hashMap = hashMapOf<String, Any>(

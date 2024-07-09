@@ -138,8 +138,14 @@ class SignUp : AppCompatActivity() {
         }
 
         val settings = hashMapOf<String, Any>(
-            "viewOutdatedCourses" to false,
-            "deleteCourses" to false,
+            "viewOutdatedCourses" to hashMapOf<String, Any>(
+                "name" to "View Outdated Courses",
+                "checked" to false
+            ),
+            "deleteCourses" to hashMapOf<String, Any>(
+                "name" to "Delete Courses",
+                "checked" to false
+            )
         )
 
         try {

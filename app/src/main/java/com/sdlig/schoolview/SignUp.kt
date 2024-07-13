@@ -3,11 +3,12 @@ package com.sdlig.schoolview
 import ApiService
 import Course
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
@@ -22,7 +23,6 @@ import java.util.ArrayList
 class SignUp : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
-    private lateinit var apiService: ApiService
 
     private lateinit var etEmailSignUp: EditText
     private lateinit var etPasswordSignup: EditText
@@ -50,30 +50,38 @@ class SignUp : AppCompatActivity() {
             if (email.isEmpty() || password.isEmpty() || accessToken.isEmpty()) {
                 Toast.makeText(this, "Please fill out all fields", Toast.LENGTH_SHORT).show()
             } else {
-                auth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this) { task ->
-                        if (task.isSuccessful) {
-                            // Firebase authentication successful
-                            val firebaseUser = auth.currentUser
-
-                            val retrofit: Retrofit = Retrofit.Builder()
-                                .baseUrl(getBaseUrl(accessToken))
-                                .addConverterFactory(GsonConverterFactory.create())
-                                .build()
-                            privateAccessToken = accessToken.toString()
-                            val apiService: ApiService = retrofit.create(ApiService::class.java)
-
-                            // Fetch courses and handle them
-                            var _pageNumber = 1
-                            var allCourses: ArrayList<Course> = arrayListOf()
-
-                            fetchCourses(apiService, 1, getAccessToken(accessToken), allCourses)
-
-
-                        }
-                    }
+                signUpUser(email, password, accessToken)
             }
         }
+    }
+
+    private fun signUpUser(email: String, password: String, accessToken: String) {
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    val firebaseUser = auth.currentUser
+
+                    val retrofit = createRetrofitInstance(accessToken)
+                    privateAccessToken = accessToken
+                    val apiService = retrofit.create(ApiService::class.java)
+
+                    val allCourses = ArrayList<Course>()
+                    fetchCourses(apiService, 1, accessToken, allCourses)
+                } else {
+                    val errorMessage = task.exception?.message ?: "Unknown error occurred"
+                    Toast.makeText(this, "Failed to create account: $errorMessage", Toast.LENGTH_SHORT).show()
+                    task.exception?.let { e ->
+                        Log.e("SignUp", "Failed to create account", e)
+                    }
+                }
+            }
+    }
+
+    private fun createRetrofitInstance(accessToken: String): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(getBaseUrl(accessToken))
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
     }
 
     private fun fetchCourses(apiService: ApiService, page: Int, accessToken: String, allCourses: MutableList<Course>) {
@@ -82,50 +90,37 @@ class SignUp : AppCompatActivity() {
                 if (response.isSuccessful) {
                     val courses: List<Course>? = response.body()
 
-                    // Add courses to the list
                     courses?.let {
                         allCourses.addAll(it)
                     }
 
-                    // Check if there are more pages to fetch
                     val nextPage = page + 1
                     if (courses != null && courses.isNotEmpty()) {
-                        // Fetch next page recursively
                         fetchCourses(apiService, nextPage, accessToken, allCourses)
                     } else {
-                        // All courses fetched, do something with allCourses list
-                        // For example, save to Firestore or display in UI
-                        // Note: Ensure you handle this according to your app's logic
-                        // For now, just print the number of courses fetched
-
                         Toast.makeText(baseContext, "Fetched ${allCourses.size} courses", Toast.LENGTH_SHORT).show()
-
                         firestoreUpdate(allCourses as ArrayList<Course>)
                     }
                 } else {
-                    // Handle API error
-                    Toast.makeText(baseContext, "Failed to fetch courses", Toast.LENGTH_SHORT).show()
+                    val errorMessage = response.errorBody()?.string() ?: "Failed to fetch courses"
+                    Toast.makeText(baseContext, errorMessage, Toast.LENGTH_SHORT).show()
+
+                    Log.e("SignUp", "Failed to fetch courses: $errorMessage")
                 }
             }
 
             override fun onFailure(call: Call<List<Course>>, t: Throwable) {
-                // Handle network error
-                Toast.makeText(baseContext, "Network error", Toast.LENGTH_SHORT).show()
+                val errorMessage = "Network error: ${t.message}"
+                Toast.makeText(baseContext, errorMessage, Toast.LENGTH_SHORT).show()
+                Log.e("SignUp", errorMessage, t)
             }
         })
     }
 
-    private fun getAccessToken(str: String): String {
-        val start = str.indexOf("access_token=")
-        if (start != -1) {
-            return str.substring(start + "access_token=".length)
-        } else return " "
-    }
-
     private fun firestoreUpdate(allCourses: ArrayList<Course>) {
-        val listOfHashmaps = arrayListOf<HashMap<String,Any>>()
-        for(course in allCourses) {
-            if(!course.isNull()) {
+        val listOfHashmaps = arrayListOf<HashMap<String, Any>>()
+        allCourses.forEach { course ->
+            if (!course.isNull()) {
                 listOfHashmaps.add(
                     hashMapOf(
                         "name" to course.name!!,
@@ -137,12 +132,12 @@ class SignUp : AppCompatActivity() {
             }
         }
 
-        val settings = hashMapOf<String, Any>(
-            "viewOutdatedCourses" to hashMapOf<String, Any>(
+        val settings = hashMapOf(
+            "viewOutdatedCourses" to hashMapOf(
                 "name" to "View Outdated Courses",
                 "checked" to false
             ),
-            "deleteCourses" to hashMapOf<String, Any>(
+            "deleteCourses" to hashMapOf(
                 "name" to "Delete Courses",
                 "checked" to false
             )
@@ -150,34 +145,35 @@ class SignUp : AppCompatActivity() {
 
         try {
             Firebase.firestore.collection("users")
-                .add(hashMapOf<String, Any>(
-                    "uid" to auth.currentUser!!.uid,
-                    "courses" to listOfHashmaps,
-                    "drafts" to listOf<Any>(),
-                    "accessToken" to privateAccessToken,
-                    "settings" to settings
-                )).addOnSuccessListener {
+                .add(
+                    hashMapOf(
+                        "uid" to auth.currentUser!!.uid,
+                        "courses" to listOfHashmaps,
+                        "drafts" to listOf<Any>(),
+                        "accessToken" to privateAccessToken,
+                        "settings" to settings
+                    )
+                ).addOnSuccessListener {
                     Toast.makeText(this@SignUp, "Successfully Created Account. Sign In Again!", Toast.LENGTH_SHORT).show()
-                    val intent = Intent(this@SignUp, Auth::class.java)
-                    startActivity(intent)
+                    startActivity(Intent(this@SignUp, Auth::class.java))
+                }.addOnFailureListener { e ->
+                    Toast.makeText(this@SignUp, "Error updating Firestore: ${e.message}", Toast.LENGTH_LONG).show()
+                    Log.e("SignUp", "Error updating Firestore", e)
                 }
         } catch (e: Exception) {
-            Toast.makeText(this@SignUp, "${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this@SignUp, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            Log.e("SignUp", "Error creating Firestore document", e)
         }
     }
 
-
-    // Function to fetch courses recursively until all pages are retrieved
-
-
-    fun getBaseUrl(url: String): String {
+    private fun getBaseUrl(url: String): String {
         val startIndex = url.indexOf("https://")
         val endIndex = url.indexOf("/api/v1/courses")
 
-        if (startIndex == -1 || endIndex == -1) {
-            return " "
+        return if (startIndex == -1 || endIndex == -1) {
+            " "
+        } else {
+            url.substring(startIndex, endIndex + "/api/v1/courses".length) + "/"
         }
-
-        return url.substring(startIndex, endIndex + "/api/v1/courses".length) + "/"
     }
 }

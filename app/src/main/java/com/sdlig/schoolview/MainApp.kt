@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
-import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -19,7 +18,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
@@ -28,7 +26,6 @@ import com.google.firebase.storage.ktx.storage
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.Calendar
 
 class MainApp : AppCompatActivity() {
 
@@ -62,22 +59,14 @@ class MainApp : AppCompatActivity() {
         auth = FirebaseAuth.getInstance()
         db = Firebase.firestore
 
-        // Check if user is authenticated
-        val user: FirebaseUser? = auth.currentUser
-
-        val today = Calendar.getInstance()
-        val sendDateUAT = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(today.time)
-
-        etNotesTitle.setText(sendDateUAT.toString())
+        // Set initial date in EditText
+        etNotesTitle.setText(getCurrentDate())
 
         // Set click listeners
         takePhotoBtn.setOnClickListener {
-            if(currentPhotoPath == null) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                    == PackageManager.PERMISSION_GRANTED) {
+            if (currentPhotoPath == null) {
+                if (checkCameraPermission()) {
                     dispatchTakePictureIntent()
-                } else {
-                    checkCameraPermission()
                 }
             } else {
                 uploadImageToFirebaseStorage(currentPhotoPath.toString())
@@ -91,34 +80,35 @@ class MainApp : AppCompatActivity() {
 
         logOutBtn.setOnClickListener {
             auth.signOut()
-            val intent = Intent(this, Auth::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, Auth::class.java))
             finish()
         }
     }
 
-    private fun checkCameraPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+    private fun getCurrentDate(): String {
+        val today = Calendar.getInstance()
+        return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()).format(today.time)
+    }
+
+    private fun checkCameraPermission(): Boolean {
+        return if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_CODE)
+            false
         } else {
-            dispatchTakePictureIntent()
+            true
         }
     }
 
     private fun dispatchTakePictureIntent() {
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
-            // Ensure that there's a camera activity to handle the intent
             takePictureIntent.resolveActivity(packageManager)?.also {
-                // Create the File where the photo should go
                 val photoFile: File? = try {
                     createImageFile()
                 } catch (ex: Exception) {
-                    // Error occurred while creating the File
                     Log.e("MainApp", "Error creating image file", ex)
                     null
                 }
-                // Continue only if the File was successfully created
                 photoFile?.also {
                     val photoURI: Uri = FileProvider.getUriForFile(
                         this,
@@ -133,15 +123,13 @@ class MainApp : AppCompatActivity() {
     }
 
     private fun createImageFile(): File {
-        // Create an image file name
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         return File.createTempFile(
-            "JPEG_${timeStamp}_", /* prefix */
-            ".jpg", /* suffix */
-            storageDir /* directory */
+            "JPEG_${timeStamp}_",
+            ".jpg",
+            storageDir
         ).apply {
-            // Save a file: path for use with ACTION_VIEW intents
             currentPhotoPath = absolutePath
         }
     }
@@ -160,12 +148,8 @@ class MainApp : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
-            // Image captured and saved to fileUri specified in the Intent
             currentPhotoPath?.let { path ->
-                // Update ImageView with the captured image
                 ivDisplayImage.setImageURI(Uri.fromFile(File(path)))
-
-                // Upload image to Firebase Storage and save URL to Firestore
             }
         }
     }
@@ -178,7 +162,6 @@ class MainApp : AppCompatActivity() {
         val uploadTask = imagesRef.putFile(file)
 
         uploadTask.addOnSuccessListener { taskSnapshot ->
-            // Image uploaded successfully, get download URL
             imagesRef.downloadUrl.addOnSuccessListener { uri ->
                 val downloadUrl = uri.toString()
 
@@ -190,18 +173,15 @@ class MainApp : AppCompatActivity() {
                             val document = querySnapshot.documents[0]
                             val drafts = document.get("drafts") as? ArrayList<Any> ?: ArrayList()
 
-                            var text = etNotesTitle.text.toString()
+                            val text = etNotesTitle.text.toString()
 
-
-                            // Add download URL to "drafts" array
-                            val hashMap = hashMapOf<String, Any>(
+                            val hashMap = hashMapOf(
                                 "url" to downloadUrl,
                                 "title" to text
                             )
                             drafts.add(hashMap)
 
-                            // Update "drafts" array in Firestore using merge operation
-                            val updates = hashMapOf<String, Any>(
+                            val updates = hashMapOf(
                                 "drafts" to drafts
                             )
                             document.reference.set(updates, SetOptions.merge())
